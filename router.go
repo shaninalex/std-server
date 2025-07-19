@@ -25,12 +25,6 @@ func NewBackendRouter() *BackendRouter {
 	}
 }
 
-//func (s *BackendRouter) Init() {
-//	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-//		http.NotFound(w, r)
-//	})
-//}
-
 func (s *BackendRouter) UnprotectedHandle(path string, handler http.HandlerFunc) {
 	finalHandler := s.applyMiddleware(handler, s.globalMW)
 	s.mux.Handle(path, finalHandler)
