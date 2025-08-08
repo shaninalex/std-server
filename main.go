@@ -16,10 +16,11 @@ func main() {
 	router.Use(NewDBMiddleware(db))
 	router.Use(NewCORSMiddleware())
 	router.Use(NewLoggerMiddleware())
-	router.UnprotectedHandle("GET /ping", HandlePing)
 
-	router.UseProtected(NewUserIDMiddleware())
-	router.ProtectedHandle("GET /profile", HandleProtected)
+	router.Public().Get("/ping", HandlePing)
+
+	router.Private().Use(NewUserIDMiddleware())
+	router.Private().Get("/profile", HandleProtected)
 
 	webService := NewWebService(config, router)
 	webService.Run(ctx)
