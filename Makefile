@@ -1,5 +1,5 @@
 start:
 	docker compose up -d --build
 
-down:
+clear:
 	docker compose down -v

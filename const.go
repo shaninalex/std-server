@@ -2,13 +2,15 @@ package main
 
 type contextKey string
 
-const ContextUserIDKey contextKey = "userId"
-const ContextDB contextKey = "db"
-const ContextAppName contextKey = "appName"
+const (
+	ContextSession = contextKey("session")
+	ContextUser    = contextKey("user")
 
-const DatabaseConnectionString string = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
-
-const EnvProduction = "production"
-const EnvStaging = "staging"
-const EnvDevelopment = "development"
-const EnvTesting = "testing"
+	ContextUserIDKey = contextKey("userId")
+	ContextDB        = contextKey("db")
+	ContextAppName   = contextKey("appName")
+	EnvProduction    = contextKey("production")
+	EnvStaging       = contextKey("staging")
+	EnvDevelopment   = contextKey("development")
+	EnvTesting       = contextKey("testing")
+)

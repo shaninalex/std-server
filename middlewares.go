@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"net/http"
 )
@@ -21,20 +20,6 @@ func (m *LoggerMiddleware) Wrap(next http.Handler) http.Handler {
 
 func NewLoggerMiddleware() *LoggerMiddleware {
 	return &LoggerMiddleware{}
-}
-
-type UserIDMiddleware struct{}
-
-func (m *UserIDMiddleware) Wrap(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userId := "user_id__2091312039123"
-		ctx := context.WithValue(r.Context(), ContextUserIDKey, userId)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-func NewUserIDMiddleware() *UserIDMiddleware {
-	return &UserIDMiddleware{}
 }
 
 type CORSMiddleware struct{}

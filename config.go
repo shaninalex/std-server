@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"os"
+
+	"github.com/spf13/viper"
 )
 
 type IConfig interface {
@@ -44,7 +45,7 @@ func (s *Config) Env() string {
 	if os.Getenv("APPLICATION_ENV") != "" {
 		return os.Getenv("APPLICATION_ENV")
 	}
-	return EnvDevelopment
+	return string(EnvDevelopment)
 }
 
 func (s *Config) String(param string) string {

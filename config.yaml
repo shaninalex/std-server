@@ -1,2 +1,5 @@
 basic:
   port: 8000
+
+db:
+  dsn: "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
