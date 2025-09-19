@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"time"
 
@@ -18,7 +19,14 @@ type SessionModel struct {
 	UserID    uuid.UUID `bun:"type:uuid,notnull"`
 	Data      []byte    `bun:"data"`
 	ExpiresAt time.Time `bun:",notnull"`
-	CreatedAt time.Time `bun:",notnull,default:current_timestamp"`
+	CreatedAt time.Time `bun:",notnull"`
+}
+
+func (s *SessionModel) BeforeInsert(ctx context.Context) (context.Context, error) {
+	if s.CreatedAt.IsZero() {
+		s.CreatedAt = time.Now()
+	}
+	return ctx, nil
 }
 
 func (s *SessionModel) IsExpired() bool {

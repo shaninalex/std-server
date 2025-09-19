@@ -13,10 +13,10 @@ import (
 
 type WebService struct {
 	config IConfig
-	router IBackendRouter
+	router *Router
 }
 
-func NewWebService(config IConfig, router IBackendRouter) *WebService {
+func NewWebService(config IConfig, router *Router) *WebService {
 	return &WebService{
 		config: config,
 		router: router,

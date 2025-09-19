@@ -5,7 +5,7 @@ import (
 )
 
 func main() {
-	router := NewBackendRouter()
+	router := NewRouter()
 	config := NewConfig("./config.yaml")
 	db := InitDB(config.String("db.dsn"))
 
@@ -18,17 +18,17 @@ func main() {
 
 	store := NewCookieStoreDatabase(db, []byte("very-secret-key"))
 
-	router.Use(NewDBMiddleware(db))
-	router.Use(NewCORSMiddleware())
-	router.Use(NewLoggerMiddleware())
+	router.Use(DatabaseMiddleware(db))
+	router.Use(CorsMiddleware)
+	router.Use(LoggerMiddleware)
 
-	router.Public().Get("/ping", HandlePing)
-	router.Public().Post("/login", HandleLogin)
-	router.Public().Post("/register", HandleRegister)
+	router.GET("/ping", HandlePing)
+	router.POST("/login", HandleLogin)
+	router.POST("/register", HandleRegister)
 
-	router.Private().Use(NewSessionMiddleware(store, "app_session"))
-	router.Private().Use(NewAuthMiddleware(db))
-	router.Private().Get("/profile", HandleProfile)
+	router.Use(AuthMiddleware(db))
+	router.Use(SessionMiddleware(store, "app_session"))
+	router.GET("/profile", HandleProfile)
 
 	webService := NewWebService(config, router)
 	webService.Run(ctx)

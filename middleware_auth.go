@@ -21,50 +21,42 @@ func GetUser(r *http.Request) *UserModel {
 	if u, ok := r.Context().Value(ContextUser).(*UserModel); ok {
 		return u
 	}
-	panic(fmt.Errorf("User not found in context"))
+	panic(fmt.Errorf("user not found in context"))
 }
 
-type AuthMiddleware struct {
-	db *bun.DB
-}
+func AuthMiddleware(db *bun.DB) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			session := GetSession(r)
+			if session == nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
 
-func NewAuthMiddleware(db *bun.DB) *AuthMiddleware {
-	return &AuthMiddleware{
-		db: db,
+			userID, ok := session.Values["user_id"].(string)
+			if !ok {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			_userID, err := uuid.Parse(userID)
+			if err != nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			var user UserModel
+			err = db.NewSelect().
+				Model(&user).
+				Where("id = ?", _userID).
+				Scan(r.Context())
+			if err != nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), ContextUser, &user)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
-}
-
-func (s *AuthMiddleware) Wrap(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session := GetSession(r)
-		if session == nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		userID, ok := session.Values["user_id"].(string)
-		if !ok {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		_userID, err := uuid.Parse(userID)
-		if err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		var user UserModel
-		err = s.db.NewSelect().
-			Model(&user).
-			Where("id = ?", _userID).
-			Scan(r.Context())
-		if err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), ContextUser, &user)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
 }

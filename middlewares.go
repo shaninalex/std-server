@@ -5,26 +5,14 @@ import (
 	"net/http"
 )
 
-type IMiddleware interface {
-	Wrap(http.Handler) http.Handler
-}
-
-type LoggerMiddleware struct{}
-
-func (m *LoggerMiddleware) Wrap(next http.Handler) http.Handler {
+func LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Request: %s %s", r.Method, r.URL.Path)
 		next.ServeHTTP(w, r)
 	})
 }
 
-func NewLoggerMiddleware() *LoggerMiddleware {
-	return &LoggerMiddleware{}
-}
-
-type CORSMiddleware struct{}
-
-func (m *CORSMiddleware) Wrap(next http.Handler) http.Handler {
+func CorsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
@@ -37,8 +25,4 @@ func (m *CORSMiddleware) Wrap(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
-}
-
-func NewCORSMiddleware() *CORSMiddleware {
-	return &CORSMiddleware{}
 }

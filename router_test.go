@@ -11,8 +11,8 @@ import (
 )
 
 func Test_Ping(t *testing.T) {
-	router := NewBackendRouter()
-	router.Public().Get("/ping", HandlePing)
+	router := NewRouter()
+	router.GET("/ping", HandlePing)
 	server := httptest.NewServer(router)
 	defer server.Close()
 

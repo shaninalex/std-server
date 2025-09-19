@@ -2,77 +2,71 @@ package main
 
 import (
 	"net/http"
-
-	"github.com/gorilla/mux"
+	"path"
 )
 
-type IRouteHandlers interface {
-	Get(path string, handler http.HandlerFunc)
-	Post(path string, handler http.HandlerFunc)
-	Use(middleware IMiddleware)
+type Middleware func(http.Handler) http.Handler
+
+type Router struct {
+	mux         *http.ServeMux
+	middlewares []Middleware
 }
 
-type IBackendRouter interface {
-	Private() IRouteHandlers
-	Public() IRouteHandlers
-	Use(middleware IMiddleware)
-	http.Handler
-}
-
-func NewBackendRouter() IBackendRouter {
-	router := mux.NewRouter()
-
-	return &BackendRouter{
-		rootRouter: router,
-		private:    &RouteHandlers{router: router},
-		public:     &RouteHandlers{router: router},
+func NewRouter() *Router {
+	return &Router{
+		mux: http.NewServeMux(),
 	}
 }
 
-type BackendRouter struct {
-	rootRouter *mux.Router
-	private    *RouteHandlers
-	public     *RouteHandlers
+func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	r.mux.ServeHTTP(w, req)
 }
 
-func (r *BackendRouter) Private() IRouteHandlers {
-	return r.private
+func (r *Router) GET(path string, handler http.HandlerFunc) {
+	r.HandlerFunc("GET", path, handler)
 }
 
-func (r *BackendRouter) Public() IRouteHandlers {
-	return r.public
+func (r *Router) HEAD(path string, handler http.HandlerFunc) {
+	r.HandlerFunc("HEAD", path, handler)
 }
 
-func (r *BackendRouter) Use(middleware IMiddleware) {
-	r.public.middlewares = append(r.public.middlewares, middleware)
-	r.private.middlewares = append(r.private.middlewares, middleware)
+func (r *Router) POST(path string, handler http.HandlerFunc) {
+	r.HandlerFunc("POST", path, handler)
 }
 
-func (r *BackendRouter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	r.rootRouter.ServeHTTP(w, req)
+func (r *Router) PUT(path string, handler http.HandlerFunc) {
+	r.HandlerFunc("PUT", path, handler)
 }
 
-type RouteHandlers struct {
-	router      *mux.Router
-	middlewares []IMiddleware
+func (r *Router) PATCH(path string, handler http.HandlerFunc) {
+	r.HandlerFunc("PATCH", path, handler)
 }
 
-func (s *RouteHandlers) handle(path string, handler http.HandlerFunc, methods ...string) {
-	h := http.Handler(handler)
-	for i := len(s.middlewares) - 1; i >= 0; i-- {
-		h = s.middlewares[i].Wrap(h)
+func (r *Router) DELETE(path string, handler http.HandlerFunc) {
+	r.HandlerFunc("DELETE", path, handler)
+}
+
+func (r *Router) HandlerFunc(method, route string, handler http.HandlerFunc) {
+	for _, pattern := range []string{
+		method + " " + path.Join(route),
+		method + " " + path.Join(route, "{$}"),
+	} {
+		r.handleWithAllMiddlewares(r.mux, pattern, handler)
 	}
-	s.router.Handle(path, h).Methods(methods...)
 }
 
-func (s *RouteHandlers) Get(path string, handler http.HandlerFunc) {
-	s.handle(path, handler, http.MethodGet)
+func (r *Router) Use(m Middleware) {
+	r.middlewares = append(r.middlewares, m)
 }
 
-func (s *RouteHandlers) Post(path string, handler http.HandlerFunc) {
-	s.handle(path, handler, http.MethodPost)
-}
+func (r *Router) handleWithAllMiddlewares(mux *http.ServeMux, pattern string, handler http.Handler) {
+	// Apply global middlewares
+	for i := len(r.middlewares) - 1; i >= 0; i-- {
+		handler = r.middlewares[i](handler)
+	}
 
-func (s *RouteHandlers) Use(middleware IMiddleware) {
-	s.middlewares = append(s.middlewares, middleware)
+	mux.HandleFunc(pattern, func(w http.ResponseWriter, req *http.Request) {
+		//NoCache(w)
+		handler.ServeHTTP(w, req)
+	})
 }
