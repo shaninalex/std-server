@@ -2,13 +2,13 @@ package api
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
 	"github.com/shaninalex/std-server/pkg"
-	"github.com/uptrace/bun"
 )
 
 func GetSession(r *http.Request) *sessions.Session {
@@ -25,7 +25,7 @@ func GetUser(r *http.Request) *pkg.UserModel {
 	panic(fmt.Errorf("user not found in context"))
 }
 
-func AuthMiddleware(db *bun.DB) func(next http.Handler) http.Handler {
+func AuthMiddleware(db *sql.DB) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			session := GetSession(r)
@@ -46,17 +46,13 @@ func AuthMiddleware(db *bun.DB) func(next http.Handler) http.Handler {
 				return
 			}
 
-			var user pkg.UserModel
-			err = db.NewSelect().
-				Model(&user).
-				Where("id = ?", _userID).
-				Scan(r.Context())
+			user, err := pkg.GetUserByID(r.Context(), db, _userID.String())
 			if err != nil {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), pkg.ContextUser, &user)
+			ctx := context.WithValue(r.Context(), pkg.ContextUser, user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

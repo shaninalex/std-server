@@ -18,10 +18,7 @@ func SessionMiddleware(store *pkg.CookieStoreDatabase, sessionName string) func(
 			}
 
 			ctx := context.WithValue(r.Context(), pkg.ContextSession, session)
-			r = r.WithContext(ctx)
-
-			next.ServeHTTP(w, r)
-
+			next.ServeHTTP(w, r.WithContext(ctx))
 			if session.IsNew || len(session.Values) > 0 {
 				if err := store.Save(r, w, session); err != nil {
 					fmt.Println("Failed to save session:", err)

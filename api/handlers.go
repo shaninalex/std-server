@@ -39,12 +39,8 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var exists bool
-	err := pkg.GetDB().NewSelect().
-		Model((*pkg.UserModel)(nil)).
-		Where("email = ?", req.Email).
-		Scan(r.Context(), &exists)
-	if err == nil && exists {
+	_user, err := pkg.GetUserByEmail(r.Context(), pkg.GetDB(), req.Email)
+	if err == nil && _user != nil {
 		http.Error(w, "Email already taken", http.StatusBadRequest)
 		return
 	}
@@ -56,7 +52,7 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := &pkg.UserModel{
-		ID:           uuid.New(),
+		ID:           uuid.NewString(),
 		Name:         req.Name,
 		Email:        req.Email,
 		PasswordHash: string(hash),
@@ -64,7 +60,7 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt:    time.Now(),
 	}
 
-	_, err = pkg.GetDB().NewInsert().Model(user).Exec(r.Context())
+	err = pkg.SaveUser(r.Context(), pkg.GetDB(), user)
 	if err != nil {
 		http.Error(w, "Could not save user", http.StatusInternalServerError)
 		return
@@ -82,12 +78,8 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user pkg.UserModel
-	err := pkg.GetDB().NewSelect().
-		Model(&user).
-		Where("email = ?", req.Email).
-		Scan(r.Context())
-	if err != nil {
+	user, err := pkg.GetUserByEmail(r.Context(), pkg.GetDB(), req.Email)
+	if err != nil && user == nil {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}

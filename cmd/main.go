@@ -10,11 +10,9 @@ import (
 func main() {
 	router := api.NewRouter()
 	db := pkg.InitDB("file:myapp.db?cache=shared&mode=rwc")
+	pkg.ApplyMigrations("file:myapp.db?cache=shared&mode=rwc")
 
 	ctx := context.Background()
-	if err := pkg.CreateModels(ctx, db); err != nil {
-		panic(err)
-	}
 
 	ctx = context.WithValue(ctx, pkg.ContextAppName, "basic")
 

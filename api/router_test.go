@@ -5,9 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_Ping(t *testing.T) {
@@ -17,9 +14,16 @@ func Test_Ping(t *testing.T) {
 	defer server.Close()
 
 	resp, err := http.Get(server.URL + "/ping")
-	require.NoError(t, err)
+	if err != nil {
+		t.Errorf("Should not contain errors. Got %v", err)
+	}
+
 	body, _ := io.ReadAll(resp.Body)
 
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	assert.Equal(t, "pong", string(body))
+	if http.StatusOK != resp.StatusCode {
+		t.Errorf("Invalid status code. got %q, wanted %q", resp.StatusCode, http.StatusOK)
+	}
+	if "pong" != string(body) {
+		t.Errorf("Invalid response body. got %q, wanted %q", string(body), "pong")
+	}
 }

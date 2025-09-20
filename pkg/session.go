@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
-	"github.com/uptrace/bun"
 )
 
 var _store *CookieStoreDatabase
@@ -18,7 +18,7 @@ func GetStore() *CookieStoreDatabase {
 	return _store
 }
 
-func NewCookieStoreDatabase(db *bun.DB, keyPairs ...[]byte) *CookieStoreDatabase {
+func NewCookieStoreDatabase(db *sql.DB, keyPairs ...[]byte) *CookieStoreDatabase {
 	st := &CookieStoreDatabase{
 		db:     db,
 		codecs: securecookie.CodecsFromPairs(keyPairs...),
@@ -33,7 +33,7 @@ func NewCookieStoreDatabase(db *bun.DB, keyPairs ...[]byte) *CookieStoreDatabase
 }
 
 type CookieStoreDatabase struct {
-	db      *bun.DB
+	db      *sql.DB
 	codecs  []securecookie.Codec
 	options *sessions.Options
 }
@@ -71,8 +71,7 @@ func (s *CookieStoreDatabase) New(r *http.Request, name string) (*sessions.Sessi
 		return session, nil
 	}
 
-	var sm SessionModel
-	err = s.db.NewSelect().Model(&sm).Where("id = ?", uid).Scan(r.Context())
+	sm, err := GetSessionByID(r.Context(), s.db, uid.String())
 	if err != nil {
 		return session, nil
 	}
@@ -118,25 +117,21 @@ func (s *CookieStoreDatabase) Save(r *http.Request, w http.ResponseWriter, sessi
 	}
 
 	// parse user_id
-	var userID uuid.UUID
-	if v, ok := values["user_id"].(uuid.UUID); ok {
+	var userID string
+	if v, ok := values["user_id"].(string); ok {
 		userID = v
 	}
 
 	ctx := r.Context()
 	sm := &SessionModel{
-		ID:        uid,
+		ID:        uid.String(),
 		UserID:    userID,
 		Data:      string(data),
 		ExpiresAt: time.Now().Add(time.Duration(session.Options.MaxAge) * time.Second),
 		CreatedAt: time.Now(),
 	}
 
-	_, err = s.db.NewInsert().
-		Model(sm).
-		On("CONFLICT (id) DO UPDATE").
-		Set("data = EXCLUDED.data, expires_at = EXCLUDED.expires_at").
-		Exec(ctx)
+	err = SaveSession(ctx, s.db, sm)
 	if err != nil {
 		return err
 	}
