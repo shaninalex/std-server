@@ -13,7 +13,6 @@ func main() {
 	pkg.ApplyMigrations("file:myapp.db?cache=shared&mode=rwc")
 
 	ctx := context.Background()
-
 	ctx = context.WithValue(ctx, pkg.ContextAppName, "basic")
 
 	store := pkg.NewCookieStoreDatabase(db, []byte("very-secret-key"))

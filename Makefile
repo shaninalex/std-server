@@ -1,5 +1,5 @@
 start:
-	go run cmd/main.go
+	go run cmd/main/main.go
 
 migrate_create:
 	~/go/bin/migrate create -ext sql -dir ./migrations -format "20060102150405" $(name)

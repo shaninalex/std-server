@@ -3,3 +3,5 @@
 __debug_*
 
 *.db
+bin/
+var/
