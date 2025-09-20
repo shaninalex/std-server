@@ -39,7 +39,7 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_user, err := pkg.GetUserByEmail(r.Context(), pkg.GetDB(), req.Email)
+	_user, err := pkg.GetUserByField(r.Context(), pkg.GetDB(), "email", req.Email)
 	if err == nil && _user != nil {
 		http.Error(w, "Email already taken", http.StatusBadRequest)
 		return
@@ -78,8 +78,8 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := pkg.GetUserByEmail(r.Context(), pkg.GetDB(), req.Email)
-	if err != nil && user == nil {
+	user, err := pkg.GetUserByField(r.Context(), pkg.GetDB(), "email", req.Email)
+	if err != nil {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}

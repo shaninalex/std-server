@@ -3,6 +3,7 @@ package pkg
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 )
 
@@ -32,49 +33,18 @@ func SaveUser(ctx context.Context, db *sql.DB, user *UserModel) error {
 	return err
 }
 
-// GetUserByEmail fetches a user by email. Returns (*UserModel, nil) if found, (nil, sql.ErrNoRows) if not found.
-func GetUserByEmail(ctx context.Context, db *sql.DB, email string) (*UserModel, error) {
+// GetUserByField fetches a user by any column (e.g., "id" or "email").
+func GetUserByField(ctx context.Context, db *sql.DB, field, value string) (*UserModel, error) {
 	user := &UserModel{}
 
-	query := `
+	query := fmt.Sprintf(`
 	SELECT id, name, email, password_hash, active, created_at, updated_at
 	FROM users
-	WHERE email = ?
+	WHERE %s = ?
 	LIMIT 1
-	`
+	`, field)
 
-	row := db.QueryRowContext(ctx, query, email)
-	err := row.Scan(
-		&user.ID,
-		&user.Name,
-		&user.Email,
-		&user.PasswordHash,
-		&user.Active,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, sql.ErrNoRows
-		}
-		return nil, err
-	}
-
-	return user, nil
-}
-
-// GetUserByID fetches a user by email. Returns (*UserModel, nil) if found, (nil, sql.ErrNoRows) if not found.
-func GetUserByID(ctx context.Context, db *sql.DB, id string) (*UserModel, error) {
-	user := &UserModel{}
-
-	query := `
-	SELECT id, name, email, password_hash, active, created_at, updated_at
-	FROM users
-	WHERE id = ?
-	LIMIT 1
-	`
-
-	row := db.QueryRowContext(ctx, query, id)
+	row := db.QueryRowContext(ctx, query, value)
 	err := row.Scan(
 		&user.ID,
 		&user.Name,

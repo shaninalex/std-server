@@ -46,7 +46,7 @@ func AuthMiddleware(db *sql.DB) func(next http.Handler) http.Handler {
 				return
 			}
 
-			user, err := pkg.GetUserByID(r.Context(), db, _userID.String())
+			user, err := pkg.GetUserByField(r.Context(), db, "id", _userID.String())
 			if err != nil {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
