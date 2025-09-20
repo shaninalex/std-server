@@ -16,6 +16,7 @@ func HandlePing(w http.ResponseWriter, r *http.Request) {
 
 func HandleProfile(w http.ResponseWriter, r *http.Request) {
 	user := GetUser(r)
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
 }
 

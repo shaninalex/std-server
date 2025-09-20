@@ -1,8 +1,7 @@
 package main
 
 import (
-	"bytes"
-	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -59,75 +58,78 @@ func (s *CookieStoreDatabase) New(r *http.Request, name string) (*sessions.Sessi
 
 	cookie, err := r.Cookie(name)
 	if err != nil {
-		// no cookie = new session
 		return session, nil
 	}
 
-	// decode session ID from cookie
 	var sessionID string
 	if err := securecookie.DecodeMulti(name, cookie.Value, &sessionID, s.codecs...); err != nil {
-		return session, nil // invalid cookie → treat as new
+		return session, nil
 	}
 
-	// load from DB
-	ctx := r.Context()
-	var sm SessionModel
-	err = s.db.NewSelect().Model(&sm).Where("id = ?", sessionID).Scan(ctx)
+	uid, err := uuid.Parse(sessionID)
 	if err != nil {
-		return session, nil // not found → new session
+		return session, nil
 	}
 
-	// decode Values
-	buf := bytes.NewBuffer(sm.Data)
-	dec := gob.NewDecoder(buf)
-	values := make(map[interface{}]interface{})
-	if err := dec.Decode(&values); err == nil {
-		session.Values = values
+	var sm SessionModel
+	err = s.db.NewSelect().Model(&sm).Where("id = ?", uid).Scan(r.Context())
+	if err != nil {
+		return session, nil
 	}
-	session.ID = sessionID
+
+	if sm.Data != "" {
+		values := make(map[string]interface{})
+		if err := json.Unmarshal([]byte(sm.Data), &values); err == nil {
+			for k, v := range values {
+				session.Values[k] = v
+			}
+		} else {
+			fmt.Println("failed to unmarshal session data:", err)
+		}
+	}
+	session.ID = uid.String()
 	session.IsNew = false
 	return session, nil
 }
 
 func (s *CookieStoreDatabase) Save(r *http.Request, w http.ResponseWriter, session *sessions.Session) error {
-	// generate ID if new
 	if session.ID == "" {
 		session.ID = uuid.NewString()
 	}
 
-	// --- make sure user_id is string, not uuid.UUID ---
-	if v, ok := session.Values["user_id"].(uuid.UUID); ok {
-		session.Values["user_id"] = v.String()
+	// normalize Values into map[string]interface{}
+	values := make(map[string]interface{}, len(session.Values))
+	for k, v := range session.Values {
+		if ks, ok := k.(string); ok {
+			values[ks] = v
+		}
 	}
 
-	// serialize Values to []byte
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	if err := enc.Encode(session.Values); err != nil {
+	// serialize as JSON
+	data, err := json.Marshal(values)
+	if err != nil {
 		return err
 	}
 
-	// parse session.ID -> uuid.UUID for DB
+	// parse session.ID
 	uid, err := uuid.Parse(session.ID)
 	if err != nil {
 		return fmt.Errorf("invalid session ID: %w", err)
 	}
 
-	// parse user_id string -> uuid.UUID for DB
+	// parse user_id
 	var userID uuid.UUID
-	if v, ok := session.Values["user_id"].(string); ok && v != "" {
-		if parsed, err := uuid.Parse(v); err == nil {
-			userID = parsed
-		}
+	if v, ok := values["user_id"].(uuid.UUID); ok {
+		userID = v
 	}
 
-	// upsert into DB
 	ctx := r.Context()
 	sm := &SessionModel{
 		ID:        uid,
 		UserID:    userID,
-		Data:      buf.Bytes(),
+		Data:      string(data),
 		ExpiresAt: time.Now().Add(time.Duration(session.Options.MaxAge) * time.Second),
+		CreatedAt: time.Now(),
 	}
 
 	_, err = s.db.NewInsert().
@@ -139,7 +141,6 @@ func (s *CookieStoreDatabase) Save(r *http.Request, w http.ResponseWriter, sessi
 		return err
 	}
 
-	// set cookie with signed session ID
 	encoded, err := securecookie.EncodeMulti(session.Name(), session.ID, s.codecs...)
 	if err != nil {
 		return err

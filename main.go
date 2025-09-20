@@ -26,8 +26,8 @@ func main() {
 	router.POST("/login", HandleLogin)
 	router.POST("/register", HandleRegister)
 
-	router.Use(AuthMiddleware(db))
 	router.Use(SessionMiddleware(store, "app_session"))
+	router.Use(AuthMiddleware(db))
 	router.GET("/profile", HandleProfile)
 
 	webService := NewWebService(config, router)
