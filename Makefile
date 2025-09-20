@@ -1,5 +1,2 @@
 start:
-	docker compose up -d --build
-
-clear:
-	docker compose down -v
+	go run cmd/main.go

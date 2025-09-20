@@ -1,5 +1,0 @@
-basic:
-  port: 8000
-
-db:
-  dsn: "file:myapp.db?cache=shared&mode=rwc"

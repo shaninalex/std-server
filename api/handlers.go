@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"encoding/json"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shaninalex/std-server/pkg"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -39,8 +40,8 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var exists bool
-	err := GetDB().NewSelect().
-		Model((*UserModel)(nil)).
+	err := pkg.GetDB().NewSelect().
+		Model((*pkg.UserModel)(nil)).
 		Where("email = ?", req.Email).
 		Scan(r.Context(), &exists)
 	if err == nil && exists {
@@ -54,7 +55,7 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := &UserModel{
+	user := &pkg.UserModel{
 		ID:           uuid.New(),
 		Name:         req.Name,
 		Email:        req.Email,
@@ -63,7 +64,7 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt:    time.Now(),
 	}
 
-	_, err = GetDB().NewInsert().Model(user).Exec(r.Context())
+	_, err = pkg.GetDB().NewInsert().Model(user).Exec(r.Context())
 	if err != nil {
 		http.Error(w, "Could not save user", http.StatusInternalServerError)
 		return
@@ -81,8 +82,8 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user UserModel
-	err := GetDB().NewSelect().
+	var user pkg.UserModel
+	err := pkg.GetDB().NewSelect().
 		Model(&user).
 		Where("email = ?", req.Email).
 		Scan(r.Context())
@@ -96,12 +97,12 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, _ := GetStore().Get(r, "app_session")
+	session, _ := pkg.GetStore().Get(r, "app_session")
 	session.Values["user_id"] = user.ID
 	session.Values["user_email"] = user.Email
 	session.Options.MaxAge = 86400 * 7 // 7 днів
 
-	if err := GetStore().Save(r, w, session); err != nil {
+	if err := pkg.GetStore().Save(r, w, session); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to save session: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}

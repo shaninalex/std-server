@@ -1,9 +1,8 @@
-package main
+package api
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -12,24 +11,20 @@ import (
 )
 
 type WebService struct {
-	config IConfig
 	router *Router
 }
 
-func NewWebService(config IConfig, router *Router) *WebService {
+func NewWebService(router *Router) *WebService {
 	return &WebService{
-		config: config,
 		router: router,
 	}
 }
 
 func (s *WebService) Run(ctx context.Context) {
-	appName := ctx.Value(ContextAppName).(string)
-	addr := fmt.Sprintf(":%d", s.config.Int(appName+".port"))
-
+	addr := ":8000"
 	srv := &http.Server{
 		Handler:      s.router,
-		Addr:         addr,
+		Addr:         ":8000",
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}

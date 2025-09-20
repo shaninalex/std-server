@@ -1,12 +1,14 @@
-package main
+package api
 
 import (
 	"context"
 	"fmt"
 	"net/http"
+
+	"github.com/shaninalex/std-server/pkg"
 )
 
-func SessionMiddleware(store *CookieStoreDatabase, sessionName string) func(next http.Handler) http.Handler {
+func SessionMiddleware(store *pkg.CookieStoreDatabase, sessionName string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			session, err := store.Get(r, sessionName)
@@ -15,7 +17,7 @@ func SessionMiddleware(store *CookieStoreDatabase, sessionName string) func(next
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), ContextSession, session)
+			ctx := context.WithValue(r.Context(), pkg.ContextSession, session)
 			r = r.WithContext(ctx)
 
 			next.ServeHTTP(w, r)

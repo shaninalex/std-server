@@ -1,4 +1,4 @@
-module github.com/shaninalex/httpserver
+module github.com/shaninalex/std-server
 
 go 1.24.2
 

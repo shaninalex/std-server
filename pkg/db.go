@@ -1,10 +1,9 @@
-package main
+package pkg
 
 import (
 	"context"
 	"database/sql"
 	"log"
-	"net/http"
 	"strings"
 	"time"
 
@@ -36,7 +35,7 @@ func InitDB(dsn string) *bun.DB {
 	return db
 }
 
-func createModels(ctx context.Context, db *bun.DB) error {
+func CreateModels(ctx context.Context, db *bun.DB) error {
 	if _, err := db.NewCreateTable().Model((*UserModel)(nil)).Exec(ctx); err != nil {
 		if !strings.Contains(err.Error(), "already exists") {
 			return err
@@ -48,13 +47,4 @@ func createModels(ctx context.Context, db *bun.DB) error {
 		}
 	}
 	return nil
-}
-
-func DatabaseMiddleware(db *bun.DB) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := context.WithValue(r.Context(), ContextDB, db)
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	}
 }
